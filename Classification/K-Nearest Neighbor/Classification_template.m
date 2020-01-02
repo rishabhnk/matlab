@@ -1,0 +1,151 @@
+clear all
+
+%% --------------- Importing the dataset -------------------------
+% ---------------------------- Code ---------------------------
+data = readtable('C:\dev\matlabCode\Classification\K-Nearest Neighbor\Social_Network_Ads.csv');
+
+
+
+%________________________________________________________________
+%________________________________________________________________
+
+%%---------------Data Preprocessing -----------------------------
+
+
+%% -------------- Feature Scalling -------------------------------
+
+% -------------- Method 1: Standardization ----------------------
+% ---------------------------- Code -----------------------------
+
+stand_age = (data.Age - mean(data.Age))/std(data.Age);
+data.Age = stand_age; 
+
+stand_estimted_salary = (data.EstimatedSalary - mean(data.EstimatedSalary))/std(data.EstimatedSalary);
+data.EstimatedSalary = stand_estimted_salary; 
+
+ plot(data.Age)
+%________________________________________________________________
+%________________________________________________________________
+
+%%%%---------------Classifying Data  -----------------------------
+%% -------------- Building Classifier ----------------------------
+% ---------------------------- Code ---------------------------
+
+
+classification_model = fitcknn(data,'Purchased~Age+EstimatedSalary');
+%%- instantiating the classigication model, not trained yet
+%please define your classifier here
+
+%% -------------- Test and Train sets ----------------------------
+% ---------------------------- Code ---------------------------
+
+cv = cvpartition(classification_model.NumObservations, 'HoldOut', 0.2); 
+%= creating an object - gets and sets the observations from the
+%classification_model instantiation as test and train and gets the nums of
+%each
+cross_validated_model = crossval(classification_model,'cvpartition',cv);
+%trains the model (instantiated before) based on the preselected training
+%set that is in the cv var.
+
+
+
+
+%% -------------- Making Predictions for Test sets ---------------
+% ---------------------------- Code ---------------------------
+
+Predictions = predict(cross_validated_model.Trained{1},data(test(cv),1:end-1));
+%predictions are made from the cross_validated_model.Trained (cell array
+%with 1 cell)on the testing data that is selected from data variable by
+%(row,col) indexing. row = boolean vector of which rows are test set and
+%col = all cols except Y col.
+
+
+
+%% -------------- Analyzing the predictions ---------------------
+% ---------------------------- Code ---------------------------
+
+Results = confusionmat(cross_validated_model.Y(test(cv)),Predictions);
+%make confusion matrix based off of the comparison between the actual
+%y-values from the data set (selected with test(cv) boolean) vs y-values
+%predicted by the model from the test set (Predictions)
+%Results = correct wrong
+%            wrong correct
+
+
+
+%% -------------- Visualizing training set results --------------
+%  ---------------------------- Code ---------------------------
+ 
+labels = unique(data.Purchased);
+classifier_name = 'K-Nearest Neigbor (Training Results)';
+ % please mention your classifier name here
+
+Age_range = min(data.Age(training(cv)))-1:0.01:max(data.Age(training(cv)))+1;
+Estimated_salary_range = min(data.EstimatedSalary(training(cv)))-1:0.01:max(data.EstimatedSalary(training(cv)))+1;
+
+[xx1, xx2] = meshgrid(Age_range,Estimated_salary_range);
+XGrid = [xx1(:) xx2(:)];
+ 
+predictions_meshgrid = predict(cross_validated_model.Trained{1},XGrid);
+ 
+gscatter(xx1(:), xx2(:), predictions_meshgrid,'rgb');
+ 
+hold on
+ 
+training_data = data(training(cv),:);
+Y = ismember(training_data.Purchased,labels{1});
+ 
+ 
+scatter(training_data.Age(Y),training_data.EstimatedSalary(Y), 'o' , 'MarkerEdgeColor', 'black', 'MarkerFaceColor', 'red');
+scatter(training_data.Age(~Y),training_data.EstimatedSalary(~Y) , 'o' , 'MarkerEdgeColor', 'black', 'MarkerFaceColor', 'green');
+ 
+ 
+xlabel('Age');
+ylabel('Estimated Salary');
+ 
+title(classifier_name);
+legend off, axis tight
+ 
+legend(labels,'Location',[0.45,0.01,0.45,0.05],'Orientation','Horizontal');
+ 
+ 
+ 
+%% -------------- Visualizing testing set results ----------------
+% ---------------------------- Code ---------------------------
+ 
+labels = unique(data.Purchased);
+classifier_name = 'K-Nearest Neigbor (Testing Results)';
+ % please mention your classifier name here
+
+Age_range = min(data.Age(training(cv)))-1:0.01:max(data.Age(training(cv)))+1;
+Estimated_salary_range = min(data.EstimatedSalary(training(cv)))-1:0.01:max(data.EstimatedSalary(training(cv)))+1;
+
+[xx1, xx2] = meshgrid(Age_range,Estimated_salary_range);
+XGrid = [xx1(:) xx2(:)];
+
+predictions_meshgrid = predict(cross_validated_model.Trained{1},XGrid);
+
+figure
+
+gscatter(xx1(:), xx2(:), predictions_meshgrid,'rgb');
+
+hold on
+
+testing_data =  data(test(cv),:);
+Y = ismember(testing_data.Purchased,labels{1});
+ 
+scatter(testing_data.Age(Y),testing_data.EstimatedSalary(Y), 'o' , 'MarkerEdgeColor', 'black', 'MarkerFaceColor', 'red');
+scatter(testing_data.Age(~Y),testing_data.EstimatedSalary(~Y) , 'o' , 'MarkerEdgeColor', 'black', 'MarkerFaceColor', 'green');
+
+
+xlabel('Age');
+ylabel('Estimated Salary');
+
+title(classifier_name);
+legend off, axis tight
+
+legend(labels,'Location',[0.45,0.01,0.45,0.05],'Orientation','Horizontal');
+ 
+%________________________________________________________________
+%________________________________________________________________
+ 
